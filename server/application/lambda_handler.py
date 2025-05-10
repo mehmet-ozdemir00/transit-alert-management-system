@@ -3,8 +3,6 @@ import json
 import boto3
 import logging
 import re
-import requests
-from jose import jwt, JWTError, ExpiredSignatureError
 
 from transit_alert_service import TransitAlertSystem
 from transport_data_stream import TransportDataService
@@ -13,8 +11,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 class LambdaFunctionService:
-    jwks = None
-
     @staticmethod
     def response(status_code, body):
         return {
@@ -22,57 +18,6 @@ class LambdaFunctionService:
             "body": json.dumps(body) if isinstance(body, dict) else body,
             "headers": {"Content-Type": "application/json"}
         }
-
-    @staticmethod
-    def decode_jwt(event):
-        headers = event.get("headers", {}) or {}
-        auth_header = headers.get("Authorization") or headers.get("authorization", "")
-
-        if not auth_header.startswith("Bearer "):
-            raise ValueError("Invalid Authorization header format. Expected 'Bearer <token>'")
-
-        token = auth_header.split("Bearer ")[-1].strip()
-        if not token:
-            raise ValueError("Authorization token is missing or empty")
-        
-        # Log the token to check its value
-        logger.info(f"Received JWT Token: {token}")
-
-        region = os.environ["COGNITO_REGION"]
-        user_pool_id = os.environ["COGNITO_USER_POOL_ID"]
-        audience = os.environ.get("COGNITO_APP_CLIENT_ID")
-        jwks_url = f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}/.well-known/jwks.json"
-
-        if LambdaFunctionService.jwks is None:
-            response = requests.get(jwks_url)
-            if response.status_code != 200:
-                raise ValueError("Unable to fetch JWKS from Cognito")
-            LambdaFunctionService.jwks = response.json().get("keys", [])
-
-        try:
-            unverified_header = jwt.get_unverified_header(token)
-            kid = unverified_header.get("kid")
-            if not kid:
-                raise ValueError("Invalid token header: missing 'kid'")
-
-            key = next((k for k in LambdaFunctionService.jwks if k["kid"] == kid), None)
-            if not key:
-                raise ValueError("Public key not found in JWKS")
-
-            payload = jwt.decode(
-                token,
-                key,
-                algorithms=["RS256"],
-                audience=audience,
-                issuer=f"https://cognito-idp.{region}.amazonaws.com/{user_pool_id}"
-            )
-            return payload
-        except ExpiredSignatureError:
-            raise ValueError("Token is expired")
-        except JWTError as e:
-            raise ValueError(f"Invalid token: {str(e)}")
-        except Exception as e:
-            raise ValueError(f"Error decoding token: {str(e)}")
 
     @staticmethod
     def validate_user_route(user_id, route, stop_id):
@@ -94,7 +39,6 @@ class LambdaFunctionService:
 
 def lambda_handler(event, context):
     try:
-        # Load environment configuration
         sns_topic_arn = os.environ["SNS_TOPIC_ARN"]
         delay_threshold_minutes = int(os.environ.get("DELAY_THRESHOLD_MINUTES", "4"))
         vehicle_delay_threshold = int(os.environ.get("VEHICLE_DELAY_THRESHOLD", "5"))
@@ -103,7 +47,6 @@ def lambda_handler(event, context):
         max_retries = int(os.environ.get("MAX_RETRIES", "3"))
         retry_delay = int(os.environ.get("RETRY_DELAY", "5"))
 
-        # Initialize services
         data_service = TransportDataService(dynamodb_table_name)
         alert_system = TransitAlertSystem(
             sns_client=boto3.client("sns"),
@@ -116,14 +59,9 @@ def lambda_handler(event, context):
             retry_delay=retry_delay
         )
 
-        # Determine environment and decode token
-        env = os.getenv("ENV", "").lower()
-        if env == "dev":
-            claims = {"sub": "test-user-id", "email": "test@example.com"}
-        else:
-            claims = LambdaFunctionService.decode_jwt(event)
+        # For now, fallback to a fixed user (or extract from query param/header if needed)
+        user_id = "anonymous"
 
-        user_id = claims.get("sub")
         http_method = event.get("httpMethod", "").upper()
         path = event.get("path", "").lower()
 
@@ -158,7 +96,6 @@ def lambda_handler(event, context):
             route = event.get("queryStringParameters", {}).get("route")
             if not route:
                 return LambdaFunctionService.response(400, {"error": "Missing required query parameter: route"})
-
             alert_system.check_vehicle_delay(route)
             return LambdaFunctionService.response(200, {"message": f"Checked vehicle delay for route {route}. No significant delays detected at this time."})
 
@@ -182,15 +119,13 @@ def lambda_handler(event, context):
             cancelled_routes, active_routes = alert_system.get_cancelled_routes()
             if cancelled_routes is None:
                 return LambdaFunctionService.response(404, {"error": "No cancelled routes found."})
-            
-            body = {
+            return LambdaFunctionService.response(200, {
                 "cancelled_routes": cancelled_routes,
                 "active_routes": active_routes,
                 "count_cancelled": len(cancelled_routes),
                 "count_active": len(active_routes),
                 "message": "Cancelled and active routes retrieved successfully."
-            }
-            return LambdaFunctionService.response(200, body)
+            })
 
         elif http_method == "PUT" and path == "/email":
             body = json.loads(event.get("body", "{}")) if event.get("body") else {}
@@ -200,15 +135,11 @@ def lambda_handler(event, context):
             if error:
                 return LambdaFunctionService.response(400, {"error": error})
 
-            try:
-                result = alert_system.update_subscription_email(user_id, new_email)
-                if result:
-                    return LambdaFunctionService.response(200, {"message": "Email updated successfully."})
-                else:
-                    return LambdaFunctionService.response(500, {"error": "Failed to update email."})
-            except Exception as e:
-                logger.error(f"Error updating email for {user_id}: {e}")
-                return LambdaFunctionService.response(500, {"error": "Internal server error"})
+            result = alert_system.update_subscription_email(user_id, new_email)
+            if result:
+                return LambdaFunctionService.response(200, {"message": "Email updated successfully."})
+            else:
+                return LambdaFunctionService.response(500, {"error": "Failed to update email."})
 
         elif http_method == "DELETE" and path == "/unsubscribe":
             body = json.loads(event.get("body", "{}")) if event.get("body") else {}
@@ -216,15 +147,11 @@ def lambda_handler(event, context):
             if not email:
                 return LambdaFunctionService.response(400, {"error": "Email is required"})
 
-            try:
-                success = alert_system.unsubscribe_email_from_sns(email)
-                if success:
-                    return LambdaFunctionService.response(200, {"message": f"{email} has been successfully unsubscribed from alerts."})
-                else:
-                    return LambdaFunctionService.response(404, {"error": f"No active subscription found for {email}."})
-            except Exception as e:
-                logger.error(f"Error unsubscribing {email}: {e}")
-                return LambdaFunctionService.response(500, {"error": "Internal server error"})
+            success = alert_system.unsubscribe_email_from_sns(email)
+            if success:
+                return LambdaFunctionService.response(200, {"message": f"{email} has been successfully unsubscribed from alerts."})
+            else:
+                return LambdaFunctionService.response(404, {"error": f"No active subscription found for {email}."})
 
         elif http_method == "DELETE" and path == "/subscription":
             query_params = event.get("queryStringParameters", {})

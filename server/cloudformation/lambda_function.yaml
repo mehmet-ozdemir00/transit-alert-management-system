@@ -1,25 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: An AWS Lambda application that processes public transit alerts.
 
-Parameters:
-  ExistingCognitoUserPoolId:
-    Type: String
-    Description: The ID of the existing Cognito User Pool
-
-  ExistingCognitoUserPoolClientId:
-    Type: String
-    Description: The App Client ID of the existing Cognito User Pool
-
-  ExistingCognitoUserPoolArn:
-    Type: String
-    Description: The ARN of the existing Cognito User Pool
-
-
 Resources:
 
-# LambdaExecutionRole grants necessary permissions for the Lambda function to interact with AWS services.
-# It allows Lambda to access DynamoDB for CRUD operations on the TransitAlertData table.
-# Enables Lambda to invoke API Gateway and publish notifications via SNS.
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -69,32 +52,12 @@ Resources:
     Properties:
       TopicName: TransitAlertTopic
 
-# MyApiGateway creates a REST API for handling public transit alert operations.
-# Defines the name and description for the API.
-# This API will serve as the entry point for all client requests (subscribe, update, unsubscribe, etc.).
   MyApiGateway:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: "TransitAlertServiceAPI"
       Description: "API for handling public transit alert operations"
 
-# MyCognitoAuthorizer configures Cognito as the authorization mechanism for the API.
-# Uses the Cognito User Pool to authenticate users based on the Authorization header in API requests.
-# Ensures that only authenticated users with a valid token can access the API methods.
-# Links the authorizer to the API Gateway defined above.
-  MyCognitoAuthorizer:
-    Type: AWS::ApiGateway::Authorizer
-    Properties:
-      Name: "CognitoAuthorizer"
-      Type: COGNITO_USER_POOLS
-      IdentitySource: "method.request.header.Authorization"
-      RestApiId: !Ref MyApiGateway
-      ProviderARNs:
-        - !Ref ExistingCognitoUserPoolArn
-
-# Lambda function to process transit alerts and subscriptions using Python 3.11.
-# Links function to IAM role for required permissions and environment variables.
-# Specifies deployment package location (S3 bucket and key).
   MyTransitLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -109,9 +72,6 @@ Resources:
         Variables:
           ENV: dev
           DYNAMODB_TABLE_NAME: TransportDataStream
-          COGNITO_USER_POOL_ID: !Ref ExistingCognitoUserPoolId
-          COGNITO_USER_POOL_CLIENT_ID: !Ref ExistingCognitoUserPoolClientId
-          COGNITO_REGION: !Ref AWS::Region
           SNS_TOPIC_ARN: !Ref TransitAlertTopic
           MTA_API_KEY: cf61841d-d775-4832-b96b-2e24ae75c7fb
           DELAY_THRESHOLD_MINUTES: "4"
@@ -124,7 +84,7 @@ Resources:
         S3Key: lambda_deployment.zip
 
   # API Resources & Methods
-  # Subscribe Resources
+  # Subscribe
   SubscribeResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -135,8 +95,7 @@ Resources:
   SubscribeMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: POST
       ResourceId: !Ref SubscribeResource
       RestApiId: !Ref MyApiGateway
@@ -145,31 +104,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-  SubscribeOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref SubscribeResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-
-# Update Resources
+# Update
   UpdateResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -180,8 +115,7 @@ Resources:
   UpdateMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: PUT
       ResourceId: !Ref UpdateResource
       RestApiId: !Ref MyApiGateway
@@ -190,31 +124,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-  UpdateOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref UpdateResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-
-# Unsubscribe Resource
+# Unsubscribe
   UnsubscribeResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -225,8 +135,7 @@ Resources:
   UnsubscribeMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: DELETE
       ResourceId: !Ref UnsubscribeResource
       RestApiId: !Ref MyApiGateway
@@ -235,31 +144,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-  UnsubscribeOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref UnsubscribeResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-
-# Subscription Resource
+# Subscription
   SubscriptionResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -270,8 +155,7 @@ Resources:
   SubscriptionMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: DELETE
       ResourceId: !Ref SubscriptionResource
       RestApiId: !Ref MyApiGateway
@@ -279,32 +163,8 @@ Resources:
         IntegrationHttpMethod: POST
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-  
-  SubscriptionOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref SubscriptionResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
 
-# Status Resource
+# Status
   StatusResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -315,8 +175,7 @@ Resources:
   StatusMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: GET
       ResourceId: !Ref StatusResource
       RestApiId: !Ref MyApiGateway
@@ -325,31 +184,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-  StatusOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref StatusResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
-
-# Prediction Resource
+# Prediction
   PredictionResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -360,8 +195,7 @@ Resources:
   PredictionMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: GET
       ResourceId: !Ref PredictionResource
       RestApiId: !Ref MyApiGateway
@@ -369,32 +203,8 @@ Resources:
         IntegrationHttpMethod: GET
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-  
-  PredictionOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref PredictionResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
 
-# Delay Resource
+# Delay
   DelayResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -405,8 +215,7 @@ Resources:
   DelayMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: GET
       ResourceId: !Ref DelayResource
       RestApiId: !Ref MyApiGateway
@@ -414,32 +223,8 @@ Resources:
         IntegrationHttpMethod: GET
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-  
-  DelayOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref DelayResource
-      RestApiId: !Ref MyApiGateway  
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
 
-# Cancelled Resource
+# Cancelled
   CancelledResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -450,8 +235,7 @@ Resources:
   CancelledMethod:
     Type: AWS::ApiGateway::Method
     Properties:
-      AuthorizationType: COGNITO_USER_POOLS
-      AuthorizerId: !Ref MyCognitoAuthorizer
+      AuthorizationType: NONE
       HttpMethod: GET
       ResourceId: !Ref CancelledResource
       RestApiId: !Ref MyApiGateway
@@ -459,30 +243,6 @@ Resources:
         IntegrationHttpMethod: GET
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-  
-  CancelledOptionsMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: OPTIONS
-      ResourceId: !Ref CancelledResource
-      RestApiId: !Ref MyApiGateway  
-      Integration:
-        Type: MOCK
-        RequestTemplates:
-          application/json: '{"statusCode": 200}'
-        IntegrationResponses:
-          - StatusCode: 200
-            ResponseParameters:
-              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
-              method.response.header.Access-Control-Allow-Origin: "'*'"
-      MethodResponses:
-        - StatusCode: 200
-          ResponseParameters:
-            method.response.header.Access-Control-Allow-Headers: true
-            method.response.header.Access-Control-Allow-Methods: true
-            method.response.header.Access-Control-Allow-Origin: true
 
 # API Gateway Deployment
   MyApiDeployment:
@@ -491,25 +251,16 @@ Resources:
       - SubscribeMethod
       - UpdateMethod
       - UnsubscribeMethod
+      - SubscriptionMethod
       - StatusMethod
-      - SubscribeOptionsMethod
-      - UpdateOptionsMethod
-      - UnsubscribeOptionsMethod
-      - StatusOptionsMethod
       - PredictionMethod
-      - PredictionOptionsMethod
       - DelayMethod
-      - DelayOptionsMethod
       - CancelledMethod
-      - CancelledOptionsMethod
     Properties:
       RestApiId: !Ref MyApiGateway
       StageName: dev
 
-# Grants API Gateway permission to invoke the Lambda function.
-# The permission is restricted to requests from the specified API Gateway.
-# Applied for the 'dev' stage of the API.
-# This ensures that only the API Gateway can trigger the Lambda function.
+# Lambda Permission for API Gateway
   ApiGatewayInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:
@@ -527,11 +278,3 @@ Outputs:
   ApiGatewayUrl:
     Description: "Base URL for Transit Alert Service API"
     Value: !Sub "https://${MyApiGateway}.execute-api.${AWS::Region}.amazonaws.com/dev"
-
-  CognitoUserPoolId:
-    Description: "Cognito User Pool ID"
-    Value: !Ref ExistingCognitoUserPoolId
-
-  CognitoUserPoolClientId:
-    Description: "Cognito User Pool Client ID"
-    Value: !Ref ExistingCognitoUserPoolClientId

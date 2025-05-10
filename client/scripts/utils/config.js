@@ -1,10 +1,13 @@
 // scripts/utils/config.js
 
-const BASE_API = "#";
+const BASE_API = "https://gw7thxhsi5.execute-api.us-east-1.amazonaws.com/dev";
 
 export const CONTACT_API_URL = `${BASE_API}/contact`;
-export const DONATE_API_URL = `${BASE_API}/donate`;
-export const RELIEF_API_URL = `${BASE_API}/relief-request`;
-export const SIGNIN_API_URL = `${BASE_API}/signin`;
-export const SIGNUP_API_URL = `${BASE_API}/signup`;
-export const VOLUNTEER_API_URL = `${BASE_API}/volunteer`;
+export const SUBSCRIBE_API_URL = `${BASE_API}/subscribe`;
+export const STATUS_API_URL = `${BASE_API}/status`;
+export const DELAY_API_URL = `${BASE_API}/delay`;
+export const PREDICTION_API_URL = `${BASE_API}/prediction`;
+export const CANCELLED_API_URL = `${BASE_API}/cancelled`;
+export const UPDATE_API_URL = `${BASE_API}/update`;
+export const SUBSCRIPTION_API_URL = `${BASE_API}/subscription`;
+export const UNSUBSCRIBE_API_URL = `${BASE_API}/unsubscribe`;
