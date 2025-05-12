@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: An AWS Lambda application that processes public transit alerts.
+Description: A serverless AWS Lambda system for managing and notifying users of public transit delays.
 
 Resources:
 
@@ -42,6 +42,7 @@ Resources:
                   - sns:Publish
                   - sns:Subscribe
                   - sns:Unsubscribe
+                  - sns:ConfirmSubscription
                   - sns:ListSubscriptions
                   - sns:GetSubscriptionAttributes
                   - sns:ListSubscriptionsByTopic
@@ -73,7 +74,6 @@ Resources:
           ENV: dev
           DYNAMODB_TABLE_NAME: TransportDataStream
           SNS_TOPIC_ARN: !Ref TransitAlertTopic
-          MTA_API_KEY: cf61841d-d775-4832-b96b-2e24ae75c7fb
           DELAY_THRESHOLD_MINUTES: "4"
           VEHICLE_DELAY_THRESHOLD: "5"
           MAX_SUBSCRIPTIONS: "5"
@@ -104,7 +104,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-# Update
+  # Update
   UpdateResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -124,7 +124,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-# Unsubscribe
+  # Unsubscribe
   UnsubscribeResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -144,7 +144,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-# Subscription
+  # Subscription
   SubscriptionResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -164,7 +164,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-# Status
+  # Status
   StatusResource:
     Type: AWS::ApiGateway::Resource
     Properties:
@@ -184,67 +184,7 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
-# Prediction
-  PredictionResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref MyApiGateway
-      ParentId: !GetAtt MyApiGateway.RootResourceId
-      PathPart: "prediction"
-  
-  PredictionMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: GET
-      ResourceId: !Ref PredictionResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        IntegrationHttpMethod: GET
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-
-# Delay
-  DelayResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref MyApiGateway
-      ParentId: !GetAtt MyApiGateway.RootResourceId
-      PathPart: "delay"
-  
-  DelayMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: GET
-      ResourceId: !Ref DelayResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        IntegrationHttpMethod: GET
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-
-# Cancelled
-  CancelledResource:
-    Type: AWS::ApiGateway::Resource
-    Properties:
-      RestApiId: !Ref MyApiGateway
-      ParentId: !GetAtt MyApiGateway.RootResourceId
-      PathPart: "cancelled"
-  
-  CancelledMethod:
-    Type: AWS::ApiGateway::Method
-    Properties:
-      AuthorizationType: NONE
-      HttpMethod: GET
-      ResourceId: !Ref CancelledResource
-      RestApiId: !Ref MyApiGateway
-      Integration:
-        IntegrationHttpMethod: GET
-        Type: AWS_PROXY
-        Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
-
-# API Gateway Deployment
+  # API Gateway Deployment
   MyApiDeployment:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
@@ -253,14 +193,11 @@ Resources:
       - UnsubscribeMethod
       - SubscriptionMethod
       - StatusMethod
-      - PredictionMethod
-      - DelayMethod
-      - CancelledMethod
     Properties:
       RestApiId: !Ref MyApiGateway
       StageName: dev
 
-# Lambda Permission for API Gateway
+  # Lambda Permission for API Gateway
   ApiGatewayInvokePermission:
     Type: AWS::Lambda::Permission
     Properties:

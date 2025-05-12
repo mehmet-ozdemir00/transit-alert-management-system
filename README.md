@@ -1,5 +1,5 @@
 # 🚍 Public Transport Tracking & Alert System
-A real-time tracking and notification system for public transit. Built using AWS services like Lambda, API Gateway, DynamoDB, SNS, Cognito, S3, and CloudFormation.
+A real-time tracking and notification system for public transit. Built using AWS services like Lambda, API Gateway, DynamoDB, SNS, S3, and CloudFormation.
 
 
 # 🚀 Features
@@ -37,8 +37,6 @@ A real-time tracking and notification system for public transit. Built using AWS
 
    ⚡ SNS (for email notifications)  
 
-   ⚡ Cognito (for user authentication)
-
    ⚡ Amazon S3 (for storing Lambda deployment artifacts)
 
    ⚡ CloudFormation (for infrastructure management and deployment).
@@ -50,15 +48,10 @@ A real-time tracking and notification system for public transit. Built using AWS
 | Method | Endpoint                  | Description                                  |
 |--------|---------------------------|----------------------------------------------|
 | POST   | /subscribe                | Subscribe to transit alerts                  |
-| GET    | /status                   | Check subscription status                    |
+| GET    | /status                   | View delay status for your routes            |
 | PUT    | /update                   | Update subscription details (e.g., email)    |
 | DELETE | /unsubscribe              | Unsubscribe from transit alerts              |
-| GET    | /prediction               | Get predicted transit delays                 |
-| GET    | /delay                    | Get current delays for specific routes       |
-| GET    | /cancelled                | Get current cancelled for specific routes    |
-| OPTIONS| /subscribe, /update,      | CORS support for API calls                   |          
-|        | /unsubscribe, /status,    |                                              |
-|        | /prediction, /delay       |                                              |
+| DELETE | /subscription             | Remove subscription record from DynamoDB     |
 
 
  All endpoints are protected via Amazon API Gateway and secured with Cognito authorizers.
@@ -68,7 +61,6 @@ A real-time tracking and notification system for public transit. Built using AWS
 
 All sensitive data is securely managed:
 
-* Cognito ensures secure user login and authentication.
 * DynamoDB stores user data and subscription logs with encryption at rest.
 * Lambda environment variables are used for managing credentials and other sensitive information, never hard-coded in the codebase.
 * API Gateway enforces HTTPS for secure data transmission.

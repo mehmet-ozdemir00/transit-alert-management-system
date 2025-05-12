@@ -7,12 +7,12 @@ Resources:
     Properties:
       TableName: TransportDataStream
       AttributeDefinitions:
-        - AttributeName: user_id
+        - AttributeName: email
           AttributeType: S
         - AttributeName: bus_route
           AttributeType: S
       KeySchema:
-        - AttributeName: user_id
+        - AttributeName: email
           KeyType: HASH
         - AttributeName: bus_route
           KeyType: RANGE
