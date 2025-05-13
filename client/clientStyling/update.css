@@ -1,0 +1,21 @@
+.update-container {
+  background: #fff;
+  padding: 2rem;
+  margin-top: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 360px;
+}
+
+#update-form input {
+  margin-top: 5px;
+  margin-bottom: 1rem;
+}
+
+#update-form button {
+  background-color: #17a2b8;
+}
+
+#update-form button:hover {
+  background-color: #138496;
+}
