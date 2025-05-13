@@ -16,7 +16,12 @@ class LambdaFunctionService:
         return {
             "statusCode": status_code,
             "body": json.dumps(body) if isinstance(body, dict) else body,
-            "headers": {"Content-Type": "application/json"}
+            "headers": {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type",
+                "Access-Control-Allow-Methods": "OPTIONS,POST,GET,PUT,DELETE"
+            }
         }
 
     @staticmethod

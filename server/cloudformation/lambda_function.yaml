@@ -104,6 +104,32 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
+  SubscribeOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId: !Ref SubscribeResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+            ResponseTemplates:
+              application/json: ""
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Headers: true
+
   # Update
   UpdateResource:
     Type: AWS::ApiGateway::Resource
@@ -123,6 +149,34 @@ Resources:
         IntegrationHttpMethod: POST
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+
+  UpdateOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId: !Ref UpdateResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+            ResponseTemplates:
+              application/json: ""
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+
 
   # Unsubscribe
   UnsubscribeResource:
@@ -144,6 +198,32 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
+  UnsubscribeOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId: !Ref UnsubscribeResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+            ResponseTemplates:
+              application/json: ""
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Headers: true
+
   # Subscription
   SubscriptionResource:
     Type: AWS::ApiGateway::Resource
@@ -163,6 +243,33 @@ Resources:
         IntegrationHttpMethod: POST
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
+
+  SubscriptionOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId: !Ref SubscriptionResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'DELETE,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+            ResponseTemplates:
+              application/json: ""
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Headers: true
+
 
   # Status
   StatusResource:
@@ -184,6 +291,33 @@ Resources:
         Type: AWS_PROXY
         Uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MyTransitLambdaFunction.Arn}/invocations"
 
+  StatusOptionsMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: OPTIONS
+      ResourceId: !Ref StatusResource
+      RestApiId: !Ref MyApiGateway
+      AuthorizationType: NONE
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: "{ \"statusCode\": 200 }"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type'"
+            ResponseTemplates:
+              application/json: ""
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Headers: true
+
+
   # API Gateway Deployment
   MyApiDeployment:
     Type: AWS::ApiGateway::Deployment
@@ -193,6 +327,11 @@ Resources:
       - UnsubscribeMethod
       - SubscriptionMethod
       - StatusMethod
+      - SubscribeOptionsMethod
+      - UpdateOptionsMethod
+      - StatusOptionsMethod
+      - UnsubscribeOptionsMethod
+      - SubscriptionOptionsMethod
     Properties:
       RestApiId: !Ref MyApiGateway
       StageName: dev

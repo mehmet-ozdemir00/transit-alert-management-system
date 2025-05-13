@@ -57,6 +57,21 @@ A real-time tracking and notification system for public transit. Built using AWS
  All endpoints are protected via Amazon API Gateway and secured with Cognito authorizers.
 
 
+
+## 👥 Project Contributors
+
+A cross-functional team behind the development of a serverless transit alert system powered by AWS and real-time transit data.
+
+| Name                 | Role                                   |
+|----------------------|----------------------------------------|
+| Devynn McDaniel      | Initiative Facilitator                 |
+| Mehmet Ozdemir       | Backend Developer (AWS & Python)       |
+| Patrick Medida       | Frontend Developer (UI/UX Integration) |
+| Akinbiyi Fagbemi     | Creative Strategist                    |
+| Mbah Cobbi           | Solutions Analyst                      |
+
+
+
 # 🔒 Security
 
 All sensitive data is securely managed:
